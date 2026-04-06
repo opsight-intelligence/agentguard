@@ -6,7 +6,7 @@ If you discover a security vulnerability in AgentGuard, please report it respons
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, email us at: **security@opsightintel.com**
+Instead, email us at: **utku@opsightintel.com**
 
 Include:
 - Description of the vulnerability

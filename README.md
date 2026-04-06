@@ -131,7 +131,7 @@ This is the **Community Edition** of OpSight AgentGuard. For teams that need mor
 | Compliance reporting (SOC2, HIPAA, PCI) | | | x |
 | Custom vertical development | | | x |
 
-[Contact us](mailto:info@opsightintel.com) for Pro and Enterprise pricing.
+[Contact us](mailto:utku@opsightintel.com) for Pro and Enterprise pricing.
 
 ## Questions or Issues
 
