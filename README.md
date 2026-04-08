@@ -1,138 +1,73 @@
-# OpSight AgentGuard
+AgentGuard
 
-Security guardrails for AI coding agents. Three-layer enforcement (behavioral rules, permission denials, deterministic hooks) that prevents AI agents from accessing secrets, executing dangerous commands, or leaking sensitive data.
+Claude Code has full access to your file system and shell.
+It can read your .env files, run rm -rf, execute git push --force, and curl data to external servers.
+AgentGuard stops it.
 
-Built by [OpSight Intelligence](https://github.com/opsight-intelligence).
+Three-layer enforcement — behavioral rules, permission denials, and deterministic hook scripts — that prevents AI coding agents from accessing secrets, executing dangerous commands, or leaking sensitive data.
+Built by Opsight Intelligence.
 
-## Quick Start
-
-```bash
-git clone https://github.com/opsight-intelligence/agentguard.git
+Install in 2 minutes
+bashgit clone https://github.com/opsight-intelligence/agentguard.git
 cd agentguard
 ./install.sh
-```
+Restart Claude Code. That's it.
+Prerequisites: jq must be installed.
 
-Restart Claude Code after installation.
+macOS: brew install jq
+Ubuntu/Debian: sudo apt install jq
 
-## What Gets Installed
 
-| File | Location | Purpose |
-|------|----------|---------|
-| `CLAUDE.md` | `~/.claude/CLAUDE.md` | Behavioral rules Claude Code follows every session |
-| `settings.json` | `~/.claude/settings.json` | Hard deny rules for sensitive file access and dangerous commands |
-| `block-sensitive-files.sh` | `~/.claude/hooks/` | Blocks reading .env, credentials, secrets, certificates |
-| `block-dangerous-commands.sh` | `~/.claude/hooks/` | Blocks rm -rf, sudo, chmod 777, DROP TABLE, etc. |
-| `block-git-commands.sh` | `~/.claude/hooks/` | Blocks all git command execution |
-| `block-data-exfiltration.sh` | `~/.claude/hooks/` | Blocks curl/wget uploads, base64 of secrets, /tmp writes, netcat |
-| `block-package-install.sh` | `~/.claude/hooks/` | Blocks pip/npm/gem installs from untrusted sources |
-| `block-scope-escape.sh` | `~/.claude/hooks/` | Blocks self-modification of ~/.claude/ and system paths |
-| `block-environment-escape.sh` | `~/.claude/hooks/` | Blocks ssh, docker run/exec, terraform apply/destroy, kubectl |
-| `block-pii-leakage.sh` | `~/.claude/hooks/` | Blocks writing SSNs, credit card numbers, Korean RRNs into code |
+What it blocks
+CategoryExamplesSensitive files.env, credentials, SSL certs, SSH keys, cloud configs, secrets directoriesDangerous commandsrm -rf, sudo, chmod 777, DROP TABLE, DELETE without WHERE, pipe-to-shellGit operationsAll git commands — agent writes them as text, you run them manuallyData exfiltrationcurl/wget uploads, base64 of secrets, /tmp writes, netcat channelsUntrusted packagespip/npm/gem from git URLs, custom registries, direct downloadsEnvironment escapessh, docker run/exec/build, terraform apply/destroy, kubectl deletePII in codeSSNs, credit card numbers, Korean Resident Registration Numbers
 
-## How the Three Layers Work
+How the three layers work
+Layer 1 — CLAUDE.md (behavioral)
+18 security rules Claude Code reads at session start. Influences behavior but advisory only — layers 2 and 3 enforce deterministically.
+Layer 2 — settings.json (permission denials)
+70+ hard deny rules in Claude Code's permission system. Blocks file access and command execution at the platform level before hooks run.
+Layer 3 — Hook scripts (deterministic)
+8 bash scripts that intercept every tool call. Pattern-matched blocking with exit code 2. Full incident logging to ~/.claude/guardrail-blocks.log.
+Even if the AI ignores advisory rules, the deterministic layers will block prohibited actions.
 
-**Layer 1 — CLAUDE.md (behavioral guidance)**
-Claude Code reads this file at the start of every session. It contains detailed rules about what the agent should and should not do.
+What gets installed
+FileLocationPurposeCLAUDE.md~/.claude/CLAUDE.mdBehavioral rulessettings.json~/.claude/settings.jsonHard deny rulesblock-sensitive-files.sh~/.claude/hooks/Credential and secret protectionblock-dangerous-commands.sh~/.claude/hooks/Destructive command blockingblock-git-commands.sh~/.claude/hooks/Git operation blockingblock-data-exfiltration.sh~/.claude/hooks/Exfiltration preventionblock-package-install.sh~/.claude/hooks/Supply chain safetyblock-scope-escape.sh~/.claude/hooks/Self-modification preventionblock-environment-escape.sh~/.claude/hooks/Environment isolationblock-pii-leakage.sh~/.claude/hooks/PII write prevention
 
-**Layer 2 — settings.json (permission denials)**
-These are explicit deny rules built into Claude Code's permission system. They block file access and command execution at a deeper level than CLAUDE.md.
+Verify installation
+bash./verify.sh
+Checks that all hooks are present, unmodified, executable, and registered correctly.
 
-**Layer 3 — Hook scripts (deterministic enforcement)**
-These are bash scripts that run automatically before Claude Code executes any action. They inspect the command or file path and block it with exit code 2 if it matches a dangerous pattern. 
-
-## Updating
-
-When rules are updated in this repo, every developer should pull and re-run:
-
-```bash
-cd agentguard
+Update
+bashcd agentguard
 ./update.sh
-```
+Pulls latest rules and re-installs. Merge strategy preserves any personal customisations.
 
-## Verifying Installation
+Customise
+All rules are configurable without modifying Python:
 
-To check that all guardrails are properly installed and unmodified:
+New file patterns → claude/hooks/block-sensitive-files.sh + claude/settings.json
+New dangerous commands → claude/hooks/block-dangerous-commands.sh
+New PII patterns → claude/hooks/block-pii-leakage.sh
+Behavioral rules → claude/CLAUDE.md
 
-```bash
-./verify.sh
-```
+After changes: ./test.sh to validate, ./install.sh to deploy.
 
-## Prerequisites
+Test suite
+bash./test.sh
+88 automated tests covering blocked and allowed cases for every hook.
 
-- **jq** is required by the hook scripts. Install with:
-  - macOS: `brew install jq`
-  - Ubuntu/Debian: `sudo apt install jq`
-  - Windows (WSL): `sudo apt install jq`
-
-## What Is Blocked
-
-### Sensitive Files
-All `.env` files, credential configs, SSL certificates, SSH keys, cloud provider configs, database connection files, and anything in `secrets/`, `credentials/`, `private/`, or `keys/` directories.
-
-### Dangerous Commands
-`rm -rf`, `sudo`, `chmod 777`, `kill -9`, disk operations (`mkfs`, `dd`, `fdisk`), pipe-to-shell (`curl | bash`), and database destruction commands (`DROP TABLE`, `TRUNCATE`, `DELETE` without WHERE).
-
-### Git Commands
-All git commands are blocked from agent execution. The agent will write git commands as text for the developer to review and run manually.
-
-### Data Exfiltration
-Curl/wget file uploads, base64 encoding of sensitive files, writes to /tmp or /dev/shm, clipboard exfiltration of secrets, and netcat outbound channels.
-
-### Package Installs from Untrusted Sources
-pip/npm/gem/go installs from git URLs, custom registries, or direct download links. Standard registry installs are allowed.
-
-### Scope and Environment Escape
-Self-modification of `~/.claude/`, writes to system paths (`/etc`, `/usr`, shell configs), ssh/scp to remote hosts, docker run/exec/build, destructive terraform/kubectl commands.
-
-### PII in Source Code
-US Social Security Numbers, credit card numbers (Visa, Mastercard, Amex, Discover), and Korean Resident Registration Numbers are blocked from being written into code. Synthetic test values (000-00-0000, 555-55-5555) are allowed.
-
-### Client Data
-The CLAUDE.md includes strict rules against including client confidential data (company names, internal identifiers, business metrics) in any outputs.
-
-## Customisation
-
-- To add new file patterns to block, edit `claude/hooks/block-sensitive-files.sh` and `claude/settings.json`
-- To add new dangerous commands, edit `claude/hooks/block-dangerous-commands.sh`
-- To add new PII patterns, edit `claude/hooks/block-pii-leakage.sh`
-- To add new exfiltration vectors, edit `claude/hooks/block-data-exfiltration.sh`
-- To change behavioral rules, edit `claude/CLAUDE.md`
-- After changes, run `./test.sh` to validate, then `./install.sh` to deploy locally
-
-## Troubleshooting
-
-**Hooks not firing?**
-Run `/hooks` inside Claude Code to check if hooks are registered. Verify scripts are executable: `ls -la ~/.claude/hooks/`
-
-**"jq: command not found" errors?**
+Troubleshooting
+Hooks not firing?
+Run /hooks inside Claude Code to check registration. Verify scripts are executable: ls -la ~/.claude/hooks/
+jq: command not found?
 Install jq — see Prerequisites above.
+Settings modified by developer?
+Run ./verify.sh to detect differences. Run ./install.sh to restore.
 
-**Developer modified their settings.json?**
-Run `./verify.sh` to check for differences. Run `./install.sh` to reset.
+Community vs Pro vs Enterprise
+FeatureCommunityProEnterprise8 hook scripts✓✓✓18 behavioral rules✓✓✓70+ permission denials✓✓✓3 slash commands✓✓✓Incident logging✓✓✓88 automated tests✓✓✓CI/CD agents (GitHub Actions)✓✓LLM-powered code review (BYOK)✓✓Auto-fix on PR✓✓Vertical config packs (fintech, healthcare, legal)✓✓Multi-repo deployment✓Centralized incident dashboard✓Compliance reporting (ISO 27001, SOC2, HIPAA, PCI)✓Custom vertical development✓
+Contact us for Pro and Enterprise pricing.
 
-## AgentGuard Pro
-
-This is the **Community Edition** of OpSight AgentGuard. For teams that need more:
-
-| Feature | Community (Free) | Pro | Enterprise |
-|---------|:---:|:---:|:---:|
-| 8 hook scripts | x | x | x |
-| 18 behavioral rules | x | x | x |
-| 70+ permission denies | x | x | x |
-| 3 slash commands | x | x | x |
-| Incident logging | x | x | x |
-| 88 automated tests | x | x | x |
-| CI/CD agents (GitHub Actions) | | x | x |
-| LLM-powered code review (BYOK) | | x | x |
-| Auto-fix on PR | | x | x |
-| Vertical config packs (healthcare, fintech, legal) | | x | x |
-| Multi-repo deployment | | | x |
-| Centralized incident dashboard | | | x |
-| Compliance reporting (SOC2, HIPAA, PCI) | | | x |
-| Custom vertical development | | | x |
-
-[Contact us](mailto:utku@opsightintel.com) for Pro and Enterprise pricing.
-
-## Questions or Issues
-
-Open an issue on [GitHub](https://github.com/opsight-intelligence/agentguard/issues) or reach out to the OpSight team.
+Questions or issues
+Open an issue on GitHub or contact utku@opsightintel.com
+Built by Opsight Intelligence — fraud ecosystem intelligence and AI security for financial institutions.
