@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.7.0] - 2026-04-10
+### Security
+- Hardened all 8 hook scripts against adversarial bypass vectors
+- Fixed UPDATE/WHERE pipe bug in block-dangerous-commands (statements were silently passing)
+- Added full-path command detection across 6 hooks (/usr/bin/git, /usr/bin/ssh, etc.)
+- Fixed no-space flag bypasses in block-data-exfiltration (curl -d@file, cat .env|base64)
+- Added openssl enc, xxd, and socat detection to block-data-exfiltration
+- Fixed equals-syntax bypass in block-package-install (--registry=url, --source=url)
+- Added python -m pip and --extra-index-url detection to block-package-install
+- Added ${HOME}/.claude expansion detection to block-scope-escape
+- Added dd, sed -i, chmod as write indicators in block-scope-escape
+- Extended SSN detection to catch space-separated format (123 45 6789) in block-pii-leakage
+- Added kill -SIGKILL and curl|source detection to block-dangerous-commands
+
+### Added
+- 67 adversarial red-team tests (test suite now 155 total, 0 failures)
+- Red-team tests cover: full-path evasion, no-space flags, encoding tools, PII format variants, pipe logic, variable expansion, command chaining
+
 ## [1.6.0] - 2026-04-03
 ### Added
 - Phase 3: Governance Check Agent (ai-ci-agents/)
